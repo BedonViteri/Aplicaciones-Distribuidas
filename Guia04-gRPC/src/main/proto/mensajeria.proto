@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package ec.edu.uteq.distribuidas.grpc;
+
+option java_package = "ec.edu.uteq.distribuidas.grpc.gen";
+option java_outer_classname = "MensajeriaProto";
+option java_multiple_files = true;
+
+// -- Mensajes de solicitud y respuesta -------------
+message SolicitudMensaje {
+  string remitente = 1;
+  string contenido = 2;
+  int64 timestamp = 3;
+}
+
+message RespuestaMensaje {
+  string servidor = 1;
+  string contenido = 2;
+  int64 timestamp = 3;
+  bool exito = 4;
+}
+
+message SolicitudStream {
+  string usuario = 1;
+  int32 cantidad = 2;
+}
+
+// -- Definicion del servicio gRPC -------------------
+service ServicioMensajeria {
+
+  // Llamada unaria
+  rpc EnviarMensaje (SolicitudMensaje) returns (RespuestaMensaje);
+
+  // Server streaming
+  rpc RecibirNoticias (SolicitudStream) returns (stream RespuestaMensaje);
+
+  // Bidireccional
+  rpc ChatBidireccional (stream SolicitudMensaje) returns (stream RespuestaMensaje);
+}
