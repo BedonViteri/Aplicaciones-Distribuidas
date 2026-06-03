@@ -1,0 +1,3185 @@
+openapi: 3.0.3
+
+info:
+  title: SGA - Sistema de Gestión Académica
+  version: 1.0.0
+  description: >
+    API REST del Sistema de Gestión Académica (SGA) para instituciones educativas.
+    Cubre dos módulos: **sga_principal** (usuarios, estudiantes, matrículas, asignaciones,
+    horarios, estructura académica) y **sga_docente** (actividades, calificaciones,
+    asistencias, promedios, seguimiento académico).
+    Toda operación requiere autenticación mediante Bearer JWT.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Servidor de desarrollo local
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Autenticación y gestión de sesión
+  - name: Usuarios
+    description: Gestión de usuarios del sistema
+  - name: Estudiantes
+    description: Registro y consulta de estudiantes
+  - name: Matrículas
+    description: Proceso de matrícula de estudiantes
+  - name: Asignaciones
+    description: Asignaciones de docentes a asignaturas y paralelos
+  - name: Asignaturas
+    description: Catálogo de asignaturas
+  - name: Grados y Paralelos
+    description: Estructura de grados, paralelos y niveles educativos
+  - name: Años Lectivos
+    description: Gestión de años lectivos y períodos de evaluación
+  - name: Horarios
+    description: Horarios de clases
+  - name: Actividades
+    description: Actividades formativas y sumativas por asignación
+  - name: Calificaciones
+    description: Registro de notas de estudiantes
+  - name: Asistencias
+    description: Control de asistencia diaria
+  - name: Promedios
+    description: Cálculo y consulta de promedios trimestrales y anuales
+  - name: Seguimiento
+    description: Seguimiento académico por DECE, tutores y directivos
+  - name: Auditoría
+    description: Registro de auditoría del sistema
+
+# ============================================================
+# PATHS
+# ============================================================
+
+paths:
+
+  # ── AUTH ──────────────────────────────────────────────────
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      description: Autentica al usuario con username/correo y contraseña. Devuelve JWT.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: "jdoe"
+              password: "Secreto123!"
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Credenciales inválidas o usuario bloqueado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Cerrar sesión
+      description: Invalida el token JWT del usuario autenticado.
+      responses:
+        '200':
+          description: Sesión cerrada correctamente
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/cambiar-password:
+    post:
+      tags: [Auth]
+      summary: Cambiar contraseña
+      description: Permite al usuario cambiar su contraseña. Obligatorio en el primer ingreso.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarPasswordRequest'
+      responses:
+        '200':
+          description: Contraseña actualizada exitosamente
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── USUARIOS ──────────────────────────────────────────────
+
+  /usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios
+      description: Retorna la lista paginada de usuarios del sistema.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: estado
+          in: query
+          description: Filtrar por estado activo/inactivo
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Usuarios]
+      summary: Crear usuario
+      description: Crea un nuevo usuario del sistema con sus datos de persona y roles.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioRequest'
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /usuarios/{id_usuario}:
+    get:
+      tags: [Usuarios]
+      summary: Obtener usuario por ID
+      parameters:
+        - $ref: '#/components/parameters/IdUsuario'
+      responses:
+        '200':
+          description: Datos del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Usuarios]
+      summary: Actualizar usuario
+      parameters:
+        - $ref: '#/components/parameters/IdUsuario'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioRequest'
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [Usuarios]
+      summary: Desactivar usuario
+      description: Desactiva el usuario (soft delete, estado=false).
+      parameters:
+        - $ref: '#/components/parameters/IdUsuario'
+      responses:
+        '204':
+          description: Usuario desactivado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /usuarios/{id_usuario}/roles:
+    get:
+      tags: [Usuarios]
+      summary: Listar roles del usuario
+      parameters:
+        - $ref: '#/components/parameters/IdUsuario'
+      responses:
+        '200':
+          description: Roles asignados al usuario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RolResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Usuarios]
+      summary: Asignar rol a usuario
+      parameters:
+        - $ref: '#/components/parameters/IdUsuario'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_rol]
+              properties:
+                id_rol:
+                  type: integer
+      responses:
+        '201':
+          description: Rol asignado
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── ESTUDIANTES ──────────────────────────────────────────
+
+  /estudiantes:
+    get:
+      tags: [Estudiantes]
+      summary: Listar estudiantes
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: q
+          in: query
+          description: Búsqueda por nombre, apellido o cédula
+          schema:
+            type: string
+        - name: estado
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista paginada de estudiantes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstudiantePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Estudiantes]
+      summary: Registrar estudiante
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstudianteRequest'
+      responses:
+        '201':
+          description: Estudiante creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstudianteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /estudiantes/{id_estudiante}:
+    get:
+      tags: [Estudiantes]
+      summary: Obtener estudiante por ID
+      parameters:
+        - $ref: '#/components/parameters/IdEstudiante'
+      responses:
+        '200':
+          description: Datos del estudiante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstudianteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Estudiantes]
+      summary: Actualizar estudiante
+      parameters:
+        - $ref: '#/components/parameters/IdEstudiante'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstudianteRequest'
+      responses:
+        '200':
+          description: Estudiante actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstudianteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /estudiantes/{id_estudiante}/ficha:
+    get:
+      tags: [Estudiantes]
+      summary: Obtener ficha médica del estudiante
+      parameters:
+        - $ref: '#/components/parameters/IdEstudiante'
+      responses:
+        '200':
+          description: Ficha médica
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FichaEstudianteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Estudiantes]
+      summary: Actualizar ficha médica
+      parameters:
+        - $ref: '#/components/parameters/IdEstudiante'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FichaEstudianteRequest'
+      responses:
+        '200':
+          description: Ficha actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FichaEstudianteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── REPRESENTANTES ────────────────────────────────────────
+
+  /representantes:
+    get:
+      tags: [Estudiantes]
+      summary: Listar representantes
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Lista de representantes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepresentantePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Estudiantes]
+      summary: Registrar representante
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepresentanteRequest'
+      responses:
+        '201':
+          description: Representante creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepresentanteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /representantes/{id_representante}:
+    get:
+      tags: [Estudiantes]
+      summary: Obtener representante por ID
+      parameters:
+        - name: id_representante
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Datos del representante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepresentanteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── AÑOS LECTIVOS ─────────────────────────────────────────
+
+  /anos-lectivos:
+    get:
+      tags: [Años Lectivos]
+      summary: Listar años lectivos
+      responses:
+        '200':
+          description: Lista de años lectivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnoLectivoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Años Lectivos]
+      summary: Crear año lectivo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnoLectivoRequest'
+      responses:
+        '201':
+          description: Año lectivo creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnoLectivoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /anos-lectivos/actual:
+    get:
+      tags: [Años Lectivos]
+      summary: Obtener año lectivo actual
+      responses:
+        '200':
+          description: Año lectivo activo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnoLectivoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /anos-lectivos/{id_ano_lectivo}:
+    get:
+      tags: [Años Lectivos]
+      summary: Obtener año lectivo por ID
+      parameters:
+        - $ref: '#/components/parameters/IdAnoLectivo'
+      responses:
+        '200':
+          description: Año lectivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnoLectivoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── PERÍODOS DE EVALUACIÓN ────────────────────────────────
+
+  /periodos-evaluacion:
+    get:
+      tags: [Años Lectivos]
+      summary: Listar períodos de evaluación
+      parameters:
+        - name: id_ano_lectivo
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de períodos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PeriodoEvaluacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Años Lectivos]
+      summary: Crear período de evaluación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeriodoEvaluacionRequest'
+      responses:
+        '201':
+          description: Período creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodoEvaluacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /periodos-evaluacion/{id_periodo}:
+    get:
+      tags: [Años Lectivos]
+      summary: Obtener período por ID
+      parameters:
+        - $ref: '#/components/parameters/IdPeriodo'
+      responses:
+        '200':
+          description: Período de evaluación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodoEvaluacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── NIVELES EDUCATIVOS ────────────────────────────────────
+
+  /niveles:
+    get:
+      tags: [Grados y Paralelos]
+      summary: Listar niveles educativos
+      responses:
+        '200':
+          description: Lista de niveles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NivelResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── GRADOS ────────────────────────────────────────────────
+
+  /grados:
+    get:
+      tags: [Grados y Paralelos]
+      summary: Listar grados
+      parameters:
+        - name: id_nivel
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de grados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GradoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Grados y Paralelos]
+      summary: Crear grado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GradoRequest'
+      responses:
+        '201':
+          description: Grado creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── PARALELOS ─────────────────────────────────────────────
+
+  /paralelos:
+    get:
+      tags: [Grados y Paralelos]
+      summary: Listar paralelos
+      parameters:
+        - name: id_grado
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de paralelos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParaleloResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Grados y Paralelos]
+      summary: Crear paralelo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParaleloRequest'
+      responses:
+        '201':
+          description: Paralelo creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParaleloResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── ASIGNATURAS ──────────────────────────────────────────
+
+  /asignaturas:
+    get:
+      tags: [Asignaturas]
+      summary: Listar asignaturas
+      parameters:
+        - name: activa
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de asignaturas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AsignaturaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Asignaturas]
+      summary: Crear asignatura
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsignaturaRequest'
+      responses:
+        '201':
+          description: Asignatura creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignaturaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /asignaturas/{id_asignatura}:
+    get:
+      tags: [Asignaturas]
+      summary: Obtener asignatura por ID
+      parameters:
+        - $ref: '#/components/parameters/IdAsignatura'
+      responses:
+        '200':
+          description: Asignatura
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignaturaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Asignaturas]
+      summary: Actualizar asignatura
+      parameters:
+        - $ref: '#/components/parameters/IdAsignatura'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsignaturaRequest'
+      responses:
+        '200':
+          description: Asignatura actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignaturaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── ASIGNACIONES ──────────────────────────────────────────
+
+  /asignaciones:
+    get:
+      tags: [Asignaciones]
+      summary: Listar asignaciones
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: id_docente
+          in: query
+          schema:
+            type: integer
+        - name: id_ano_lectivo
+          in: query
+          schema:
+            type: integer
+        - name: activo
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de asignaciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignacionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Asignaciones]
+      summary: Crear asignación docente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsignacionRequest'
+      responses:
+        '201':
+          description: Asignación creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /asignaciones/{id_asignacion}:
+    get:
+      tags: [Asignaciones]
+      summary: Obtener asignación por ID
+      parameters:
+        - $ref: '#/components/parameters/IdAsignacion'
+      responses:
+        '200':
+          description: Asignación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Asignaciones]
+      summary: Actualizar asignación
+      parameters:
+        - $ref: '#/components/parameters/IdAsignacion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsignacionRequest'
+      responses:
+        '200':
+          description: Asignación actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsignacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── MATRÍCULAS ────────────────────────────────────────────
+
+  /matriculas:
+    get:
+      tags: [Matrículas]
+      summary: Listar matrículas
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: id_ano_lectivo
+          in: query
+          schema:
+            type: integer
+        - name: id_grado
+          in: query
+          schema:
+            type: integer
+        - name: id_paralelo
+          in: query
+          schema:
+            type: integer
+        - name: estado
+          in: query
+          schema:
+            $ref: '#/components/schemas/EstadoMatricula'
+      responses:
+        '200':
+          description: Lista paginada de matrículas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatriculaPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Matrículas]
+      summary: Registrar matrícula
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatriculaRequest'
+      responses:
+        '201':
+          description: Matrícula creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatriculaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /matriculas/{id_matricula}:
+    get:
+      tags: [Matrículas]
+      summary: Obtener matrícula por ID
+      parameters:
+        - $ref: '#/components/parameters/IdMatricula'
+      responses:
+        '200':
+          description: Matrícula
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatriculaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      tags: [Matrículas]
+      summary: Actualizar estado de matrícula
+      parameters:
+        - $ref: '#/components/parameters/IdMatricula'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado]
+              properties:
+                estado:
+                  $ref: '#/components/schemas/EstadoMatricula'
+                observaciones:
+                  type: string
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatriculaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /matriculas/{id_matricula}/documentos:
+    get:
+      tags: [Matrículas]
+      summary: Listar documentos de la matrícula
+      parameters:
+        - $ref: '#/components/parameters/IdMatricula'
+      responses:
+        '200':
+          description: Documentos adjuntos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentoMatriculaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Matrículas]
+      summary: Subir documento de matrícula
+      parameters:
+        - $ref: '#/components/parameters/IdMatricula'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [tipo_documento, archivo]
+              properties:
+                tipo_documento:
+                  $ref: '#/components/schemas/TipoDocumento'
+                archivo:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Documento subido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentoMatriculaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── HORARIOS ──────────────────────────────────────────────
+
+  /horarios:
+    get:
+      tags: [Horarios]
+      summary: Listar horarios
+      parameters:
+        - name: id_asignacion
+          in: query
+          schema:
+            type: integer
+        - name: dia_semana
+          in: query
+          schema:
+            $ref: '#/components/schemas/DiaSemana'
+      responses:
+        '200':
+          description: Lista de horarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HorarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Horarios]
+      summary: Registrar horario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HorarioRequest'
+      responses:
+        '201':
+          description: Horario registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HorarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /horarios/{id_horario}:
+    delete:
+      tags: [Horarios]
+      summary: Eliminar horario
+      parameters:
+        - name: id_horario
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Horario eliminado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── ACTIVIDADES (módulo docente) ──────────────────────────
+
+  /actividades:
+    get:
+      tags: [Actividades]
+      summary: Listar actividades
+      parameters:
+        - name: id_asignacion
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: id_periodo
+          in: query
+          schema:
+            type: integer
+        - name: tipo
+          in: query
+          schema:
+            $ref: '#/components/schemas/TipoActividad'
+        - name: es_sumativa
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de actividades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActividadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Actividades]
+      summary: Crear actividad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActividadRequest'
+      responses:
+        '201':
+          description: Actividad creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /actividades/{id_actividad}:
+    get:
+      tags: [Actividades]
+      summary: Obtener actividad por ID
+      parameters:
+        - $ref: '#/components/parameters/IdActividad'
+      responses:
+        '200':
+          description: Actividad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Actividades]
+      summary: Actualizar actividad
+      parameters:
+        - $ref: '#/components/parameters/IdActividad'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActividadRequest'
+      responses:
+        '200':
+          description: Actividad actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [Actividades]
+      summary: Eliminar actividad
+      parameters:
+        - $ref: '#/components/parameters/IdActividad'
+      responses:
+        '204':
+          description: Actividad eliminada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── CALIFICACIONES ────────────────────────────────────────
+
+  /calificaciones:
+    get:
+      tags: [Calificaciones]
+      summary: Listar calificaciones de una actividad
+      parameters:
+        - name: id_actividad
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Calificaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalificacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Calificaciones]
+      summary: Registrar calificación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalificacionRequest'
+      responses:
+        '201':
+          description: Calificación registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalificacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /calificaciones/batch:
+    post:
+      tags: [Calificaciones]
+      summary: Registrar calificaciones masivamente
+      description: Permite registrar o actualizar notas de varios estudiantes a la vez para una actividad.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_actividad, calificaciones]
+              properties:
+                id_actividad:
+                  type: integer
+                calificaciones:
+                  type: array
+                  items:
+                    type: object
+                    required: [id_matricula]
+                    properties:
+                      id_matricula:
+                        type: integer
+                      nota:
+                        type: number
+                        format: float
+                        minimum: 0
+                        maximum: 10
+                      nota_cualitativa:
+                        $ref: '#/components/schemas/NotaCualitativa'
+                      observacion:
+                        type: string
+      responses:
+        '200':
+          description: Calificaciones guardadas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  procesados:
+                    type: integer
+                  errores:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /calificaciones/{id_calificacion}:
+    get:
+      tags: [Calificaciones]
+      summary: Obtener calificación por ID
+      parameters:
+        - name: id_calificacion
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Calificación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalificacionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Calificaciones]
+      summary: Actualizar calificación
+      parameters:
+        - name: id_calificacion
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalificacionRequest'
+      responses:
+        '200':
+          description: Calificación actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalificacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── ASISTENCIAS ───────────────────────────────────────────
+
+  /asistencias:
+    get:
+      tags: [Asistencias]
+      summary: Listar asistencias
+      parameters:
+        - name: id_asignacion
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: fecha
+          in: query
+          description: Filtrar por fecha exacta (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: id_periodo
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de asistencias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AsistenciaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Asistencias]
+      summary: Registrar asistencia diaria
+      description: Registra la asistencia de un grupo de estudiantes para una fecha y asignación.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsistenciaBatchRequest'
+      responses:
+        '201':
+          description: Asistencias registradas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  procesados:
+                    type: integer
+                  errores:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /asistencias/{id_asistencia}:
+    put:
+      tags: [Asistencias]
+      summary: Actualizar asistencia
+      parameters:
+        - name: id_asistencia
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado]
+              properties:
+                estado:
+                  $ref: '#/components/schemas/EstadoAsistencia'
+                justificacion:
+                  type: string
+      responses:
+        '200':
+          description: Asistencia actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsistenciaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /asistencias/resumen:
+    get:
+      tags: [Asistencias]
+      summary: Obtener resumen de asistencia
+      parameters:
+        - name: id_matricula
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: id_asignacion
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: id_periodo
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Resumen de asistencia del estudiante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenAsistenciaResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── PROMEDIOS ─────────────────────────────────────────────
+
+  /promedios/trimestrales:
+    get:
+      tags: [Promedios]
+      summary: Consultar promedios trimestrales
+      parameters:
+        - name: id_matricula
+          in: query
+          schema:
+            type: integer
+        - name: id_asignacion
+          in: query
+          schema:
+            type: integer
+        - name: id_periodo
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Promedios trimestrales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PromedioTrimestralResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /promedios/trimestrales/calcular:
+    post:
+      tags: [Promedios]
+      summary: Calcular promedio trimestral
+      description: Calcula y guarda el promedio trimestral de un estudiante en una asignación y período.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_matricula, id_asignacion, id_periodo]
+              properties:
+                id_matricula:
+                  type: integer
+                id_asignacion:
+                  type: integer
+                id_periodo:
+                  type: integer
+      responses:
+        '200':
+          description: Promedio calculado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromedioTrimestralResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /promedios/anuales:
+    get:
+      tags: [Promedios]
+      summary: Consultar promedios anuales
+      parameters:
+        - name: id_matricula
+          in: query
+          schema:
+            type: integer
+        - name: id_asignacion
+          in: query
+          schema:
+            type: integer
+        - name: id_ano_lectivo
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Promedios anuales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PromedioAnualResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /promedios/anuales/calcular:
+    post:
+      tags: [Promedios]
+      summary: Calcular promedio anual
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_matricula, id_asignacion, id_ano_lectivo]
+              properties:
+                id_matricula:
+                  type: integer
+                id_asignacion:
+                  type: integer
+                id_ano_lectivo:
+                  type: integer
+      responses:
+        '200':
+          description: Promedio anual calculado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromedioAnualResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── SEGUIMIENTO ACADÉMICO ─────────────────────────────────
+
+  /seguimiento:
+    get:
+      tags: [Seguimiento]
+      summary: Listar registros de seguimiento
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: id_matricula
+          in: query
+          schema:
+            type: integer
+        - name: id_periodo
+          in: query
+          schema:
+            type: integer
+        - name: categoria
+          in: query
+          schema:
+            $ref: '#/components/schemas/CategoriaSeguimiento'
+        - name: requiere_followup
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Registros de seguimiento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeguimientoPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Seguimiento]
+      summary: Registrar seguimiento académico
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeguimientoRequest'
+      responses:
+        '201':
+          description: Seguimiento registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeguimientoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /seguimiento/{id_seguimiento}:
+    get:
+      tags: [Seguimiento]
+      summary: Obtener seguimiento por ID
+      parameters:
+        - name: id_seguimiento
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Registro de seguimiento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeguimientoResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Seguimiento]
+      summary: Actualizar seguimiento
+      parameters:
+        - name: id_seguimiento
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeguimientoRequest'
+      responses:
+        '200':
+          description: Seguimiento actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeguimientoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── HISTORIAL DE PROMOCIÓN ────────────────────────────────
+
+  /historial-promocion:
+    get:
+      tags: [Matrículas]
+      summary: Listar historial de promoción
+      parameters:
+        - name: id_estudiante
+          in: query
+          schema:
+            type: integer
+        - name: id_ano_lectivo
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Historial de promoción
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistorialPromocionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Matrículas]
+      summary: Registrar resultado de promoción
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistorialPromocionRequest'
+      responses:
+        '201':
+          description: Historial registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistorialPromocionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── AUDITORÍA ─────────────────────────────────────────────
+
+  /auditoria:
+    get:
+      tags: [Auditoría]
+      summary: Consultar registros de auditoría
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: schema_origen
+          in: query
+          schema:
+            type: string
+            enum: [PRINCIPAL, DOCENTE]
+        - name: id_usuario
+          in: query
+          schema:
+            type: integer
+        - name: tabla_afectada
+          in: query
+          schema:
+            type: string
+        - name: desde
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: hasta
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Registros de auditoría
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditoriaPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# ============================================================
+# COMPONENTS
+# ============================================================
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT obtenido desde POST /auth/login.
+        Incluir en header: Authorization: Bearer <token>
+
+  # ── PARAMETERS ────────────────────────────────────────────
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Número de página (base 0)
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+    SizeParam:
+      name: size
+      in: query
+      description: Cantidad de registros por página
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    IdUsuario:
+      name: id_usuario
+      in: path
+      required: true
+      schema:
+        type: integer
+    IdEstudiante:
+      name: id_estudiante
+      in: path
+      required: true
+      schema:
+        type: integer
+    IdMatricula:
+      name: id_matricula
+      in: path
+      required: true
+      schema:
+        type: integer
+    IdAsignacion:
+      name: id_asignacion
+      in: path
+      required: true
+      schema:
+        type: integer
+    IdAnoLectivo:
+      name: id_ano_lectivo
+      in: path
+      required: true
+      schema:
+        type: integer
+    IdPeriodo:
+      name: id_periodo
+      in: path
+      required: true
+      schema:
+        type: integer
+    IdActividad:
+      name: id_actividad
+      in: path
+      required: true
+      schema:
+        type: integer
+    IdAsignatura:
+      name: id_asignatura
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  # ── RESPONSES ─────────────────────────────────────────────
+
+  responses:
+    BadRequest:
+      description: Datos de entrada inválidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-01-15T10:30:00Z"
+            status: 400
+            error: "Bad Request"
+            message: "El campo 'nombres' es obligatorio"
+            path: "/api/v1/estudiantes"
+
+    Unauthorized:
+      description: No autenticado o token inválido/expirado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-01-15T10:30:00Z"
+            status: 401
+            error: "Unauthorized"
+            message: "Token JWT inválido o expirado"
+            path: "/api/v1/estudiantes"
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-01-15T10:30:00Z"
+            status: 404
+            error: "Not Found"
+            message: "Registro no encontrado con id: 99"
+            path: "/api/v1/estudiantes/99"
+
+    InternalError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-01-15T10:30:00Z"
+            status: 500
+            error: "Internal Server Error"
+            message: "Error inesperado. Contacte al administrador."
+            path: "/api/v1/estudiantes"
+
+  # ── SCHEMAS ───────────────────────────────────────────────
+
+  schemas:
+
+    # ── Enumeraciones ──
+
+    Genero:
+      type: string
+      enum: [M, F, OTRO]
+      description: Género de la persona
+
+    EstadoMatricula:
+      type: string
+      enum: [ACTIVA, RETIRADA, TRASLADADA, PROMOVIDA, NO_PROMOVIDA]
+
+    TipoAsignacion:
+      type: string
+      enum: [ESPECIALIZADO, TUTOR, PROVISIONAL]
+
+    TipoActividad:
+      type: string
+      enum: [TAREA, PRUEBA, EXAMEN, PROYECTO, PARTICIPACION, OTRO]
+
+    EstadoAsistencia:
+      type: string
+      enum: [PRESENTE, AUSENTE, JUSTIFICADO, ATRASO]
+
+    NotaCualitativa:
+      type: string
+      enum: [DAR, AAR, PAR, NAAR]
+      description: "Domina los Aprendizajes Requeridos, Alcanza, Próximo a Alcanzar, No Alcanza"
+
+    TipoPeriodo:
+      type: string
+      enum: [TRIMESTRE_1, TRIMESTRE_2, TRIMESTRE_3]
+
+    CategoriaSeguimiento:
+      type: string
+      enum: [ACADEMICO, CONDUCTUAL, PSICOLOGICO, FAMILIAR, SALUD]
+
+    ResultadoPromocion:
+      type: string
+      enum: [PROMOVIDO, NO_PROMOVIDO, RETIRADO, TRASLADADO]
+
+    TipoDocumento:
+      type: string
+      enum: [CEDULA, PARTIDA_NACIMIENTO, FOTO, FICHA_MEDICA, CERTIFICADO_OTRO]
+
+    DiaSemana:
+      type: string
+      enum: [LUNES, MARTES, MIERCOLES, JUEVES, VIERNES]
+
+    TipoEscala:
+      type: string
+      enum: [CUALITATIVA, CUANTITATIVA]
+
+    OrigenListado:
+      type: string
+      enum: [NUEVO, TRANSFERIDO, REPITENTE, REINGRESO]
+
+    # ── Paginación genérica ──
+
+    PageMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        total_elements:
+          type: integer
+          format: int64
+        total_pages:
+          type: integer
+
+    # ── Auth ──
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          maxLength: 60
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          default: Bearer
+        expires_in:
+          type: integer
+          description: Segundos hasta expiración
+        usuario:
+          $ref: '#/components/schemas/UsuarioResponse'
+
+    CambiarPasswordRequest:
+      type: object
+      required: [password_actual, password_nueva]
+      properties:
+        password_actual:
+          type: string
+          format: password
+        password_nueva:
+          type: string
+          format: password
+          minLength: 8
+
+    # ── Usuarios y Roles ──
+
+    RolResponse:
+      type: object
+      properties:
+        id_rol:
+          type: integer
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        activo:
+          type: boolean
+
+    UsuarioRequest:
+      type: object
+      required: [username, correo, nombres, apellidos]
+      properties:
+        username:
+          type: string
+          maxLength: 60
+        correo:
+          type: string
+          format: email
+          maxLength: 150
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        cedula:
+          type: string
+          maxLength: 10
+        telefono:
+          type: string
+          maxLength: 20
+        cargo:
+          type: string
+          maxLength: 80
+        titulo_academico:
+          type: string
+          maxLength: 120
+        especializacion:
+          type: string
+          maxLength: 120
+        fecha_ingreso_inst:
+          type: string
+          format: date
+        roles:
+          type: array
+          items:
+            type: integer
+          description: IDs de roles a asignar
+
+    UsuarioResponse:
+      type: object
+      properties:
+        id_usuario:
+          type: integer
+        uuid:
+          type: string
+          format: uuid
+        username:
+          type: string
+        correo:
+          type: string
+        estado:
+          type: boolean
+        primer_ingreso:
+          type: boolean
+        ultimo_acceso:
+          type: string
+          format: date-time
+        persona:
+          type: object
+          properties:
+            id_persona:
+              type: integer
+            nombres:
+              type: string
+            apellidos:
+              type: string
+            cedula:
+              type: string
+            cargo:
+              type: string
+            titulo_academico:
+              type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolResponse'
+
+    UsuarioPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/UsuarioResponse'
+
+    # ── Estudiantes ──
+
+    EstudianteRequest:
+      type: object
+      required: [nombres, apellidos]
+      properties:
+        cedula:
+          type: string
+          maxLength: 10
+        codigo_estudiante:
+          type: string
+          maxLength: 20
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        fecha_nacimiento:
+          type: string
+          format: date
+        genero:
+          $ref: '#/components/schemas/Genero'
+        direccion:
+          type: string
+        telefono:
+          type: string
+          maxLength: 20
+        correo:
+          type: string
+          format: email
+          maxLength: 150
+        discapacidad:
+          type: boolean
+          default: false
+        tipo_discapacidad:
+          type: string
+          maxLength: 100
+        porcentaje_disc:
+          type: integer
+          minimum: 0
+          maximum: 100
+        id_representante:
+          type: integer
+        origen_listado:
+          $ref: '#/components/schemas/OrigenListado'
+        foto_url:
+          type: string
+          maxLength: 255
+
+    EstudianteResponse:
+      type: object
+      properties:
+        id_estudiante:
+          type: integer
+        cedula:
+          type: string
+        codigo_estudiante:
+          type: string
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        fecha_nacimiento:
+          type: string
+          format: date
+        genero:
+          $ref: '#/components/schemas/Genero'
+        discapacidad:
+          type: boolean
+        tipo_discapacidad:
+          type: string
+        estado:
+          type: boolean
+        representante:
+          $ref: '#/components/schemas/RepresentanteResponse'
+        fecha_creacion:
+          type: string
+          format: date-time
+
+    EstudiantePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/EstudianteResponse'
+
+    FichaEstudianteRequest:
+      type: object
+      properties:
+        tipo_sangre:
+          type: string
+          maxLength: 5
+        alergias:
+          type: string
+        medicacion_permanente:
+          type: string
+        enfermedad_catastrofica:
+          type: boolean
+          default: false
+        detalle_enfermedad:
+          type: string
+        contacto_emergencia:
+          type: string
+          maxLength: 100
+        telefono_emergencia:
+          type: string
+          maxLength: 20
+        direccion_referencia:
+          type: string
+
+    FichaEstudianteResponse:
+      allOf:
+        - $ref: '#/components/schemas/FichaEstudianteRequest'
+        - type: object
+          properties:
+            id_ficha:
+              type: integer
+            id_estudiante:
+              type: integer
+            fecha_actualizacion:
+              type: string
+              format: date-time
+
+    # ── Representantes ──
+
+    RepresentanteRequest:
+      type: object
+      required: [nombres, apellidos, parentesco]
+      properties:
+        cedula:
+          type: string
+          maxLength: 10
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        parentesco:
+          type: string
+          maxLength: 50
+        telefono_principal:
+          type: string
+          maxLength: 20
+        telefono_alt:
+          type: string
+          maxLength: 20
+        correo:
+          type: string
+          format: email
+        direccion:
+          type: string
+
+    RepresentanteResponse:
+      allOf:
+        - $ref: '#/components/schemas/RepresentanteRequest'
+        - type: object
+          properties:
+            id_representante:
+              type: integer
+
+    RepresentantePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/RepresentanteResponse'
+
+    # ── Años Lectivos ──
+
+    AnoLectivoRequest:
+      type: object
+      required: [nombre, fecha_inicio, fecha_fin]
+      properties:
+        nombre:
+          type: string
+          maxLength: 20
+          example: "2024-2025"
+        fecha_inicio:
+          type: string
+          format: date
+        fecha_fin:
+          type: string
+          format: date
+        es_actual:
+          type: boolean
+          default: false
+
+    AnoLectivoResponse:
+      allOf:
+        - $ref: '#/components/schemas/AnoLectivoRequest'
+        - type: object
+          properties:
+            id_ano_lectivo:
+              type: integer
+            fecha_creacion:
+              type: string
+              format: date-time
+
+    # ── Períodos de Evaluación ──
+
+    PeriodoEvaluacionRequest:
+      type: object
+      required: [id_ano_lectivo, tipo, nombre, fecha_inicio, fecha_fin]
+      properties:
+        id_ano_lectivo:
+          type: integer
+        tipo:
+          $ref: '#/components/schemas/TipoPeriodo'
+        nombre:
+          type: string
+          maxLength: 40
+          example: "Primer Trimestre"
+        fecha_inicio:
+          type: string
+          format: date
+        fecha_fin:
+          type: string
+          format: date
+        activo:
+          type: boolean
+          default: true
+
+    PeriodoEvaluacionResponse:
+      allOf:
+        - $ref: '#/components/schemas/PeriodoEvaluacionRequest'
+        - type: object
+          properties:
+            id_periodo:
+              type: integer
+
+    # ── Niveles, Grados y Paralelos ──
+
+    NivelResponse:
+      type: object
+      properties:
+        id_nivel:
+          type: integer
+        nombre:
+          type: string
+        tipo_escala:
+          $ref: '#/components/schemas/TipoEscala'
+        grado_inicio:
+          type: integer
+        grado_fin:
+          type: integer
+
+    GradoRequest:
+      type: object
+      required: [id_nivel, nombre, orden]
+      properties:
+        id_nivel:
+          type: integer
+        nombre:
+          type: string
+          maxLength: 60
+        orden:
+          type: integer
+        capacidad_max:
+          type: integer
+        activo:
+          type: boolean
+          default: true
+
+    GradoResponse:
+      allOf:
+        - $ref: '#/components/schemas/GradoRequest'
+        - type: object
+          properties:
+            id_grado:
+              type: integer
+            nivel:
+              $ref: '#/components/schemas/NivelResponse'
+
+    ParaleloRequest:
+      type: object
+      required: [id_grado, letra]
+      properties:
+        id_grado:
+          type: integer
+        letra:
+          type: string
+          maxLength: 1
+          example: "A"
+        activo:
+          type: boolean
+          default: true
+
+    ParaleloResponse:
+      allOf:
+        - $ref: '#/components/schemas/ParaleloRequest'
+        - type: object
+          properties:
+            id_paralelo:
+              type: integer
+
+    # ── Asignaturas ──
+
+    AsignaturaRequest:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        codigo:
+          type: string
+          maxLength: 20
+        descripcion:
+          type: string
+        horas_semana:
+          type: integer
+          minimum: 1
+        activa:
+          type: boolean
+          default: true
+
+    AsignaturaResponse:
+      allOf:
+        - $ref: '#/components/schemas/AsignaturaRequest'
+        - type: object
+          properties:
+            id_asignatura:
+              type: integer
+            fecha_creacion:
+              type: string
+              format: date-time
+
+    # ── Asignaciones ──
+
+    AsignacionRequest:
+      type: object
+      required: [id_docente, id_asignatura, id_grado, id_paralelo, id_ano_lectivo]
+      properties:
+        id_docente:
+          type: integer
+        id_asignatura:
+          type: integer
+        id_grado:
+          type: integer
+        id_paralelo:
+          type: integer
+        id_ano_lectivo:
+          type: integer
+        es_tutor:
+          type: boolean
+          default: false
+        tipo:
+          $ref: '#/components/schemas/TipoAsignacion'
+        activo:
+          type: boolean
+          default: true
+
+    AsignacionResponse:
+      allOf:
+        - $ref: '#/components/schemas/AsignacionRequest'
+        - type: object
+          properties:
+            id_asignacion:
+              type: integer
+            docente:
+              type: object
+              properties:
+                id_usuario:
+                  type: integer
+                nombres:
+                  type: string
+                apellidos:
+                  type: string
+            asignatura:
+              type: object
+              properties:
+                id_asignatura:
+                  type: integer
+                nombre:
+                  type: string
+            grado:
+              type: object
+              properties:
+                id_grado:
+                  type: integer
+                nombre:
+                  type: string
+            paralelo:
+              type: object
+              properties:
+                id_paralelo:
+                  type: integer
+                letra:
+                  type: string
+            fecha_asignacion:
+              type: string
+              format: date-time
+
+    AsignacionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/AsignacionResponse'
+
+    # ── Matrículas ──
+
+    MatriculaRequest:
+      type: object
+      required: [id_estudiante, id_grado, id_paralelo, id_ano_lectivo]
+      properties:
+        id_estudiante:
+          type: integer
+        id_grado:
+          type: integer
+        id_paralelo:
+          type: integer
+        id_ano_lectivo:
+          type: integer
+        numero_orden:
+          type: integer
+        observaciones:
+          type: string
+
+    MatriculaResponse:
+      allOf:
+        - $ref: '#/components/schemas/MatriculaRequest'
+        - type: object
+          properties:
+            id_matricula:
+              type: integer
+            estado:
+              $ref: '#/components/schemas/EstadoMatricula'
+            fecha_registro:
+              type: string
+              format: date
+            fecha_creacion:
+              type: string
+              format: date-time
+            estudiante:
+              type: object
+              properties:
+                id_estudiante:
+                  type: integer
+                nombres:
+                  type: string
+                apellidos:
+                  type: string
+                cedula:
+                  type: string
+
+    MatriculaPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/MatriculaResponse'
+
+    DocumentoMatriculaResponse:
+      type: object
+      properties:
+        id_documento:
+          type: integer
+        id_matricula:
+          type: integer
+        tipo_documento:
+          $ref: '#/components/schemas/TipoDocumento'
+        nombre_archivo:
+          type: string
+        ruta_archivo:
+          type: string
+        fecha_subida:
+          type: string
+          format: date-time
+
+    # ── Horarios ──
+
+    HorarioRequest:
+      type: object
+      required: [id_asignacion, id_periodo_diario, dia_semana]
+      properties:
+        id_asignacion:
+          type: integer
+        id_periodo_diario:
+          type: integer
+        dia_semana:
+          $ref: '#/components/schemas/DiaSemana'
+
+    HorarioResponse:
+      allOf:
+        - $ref: '#/components/schemas/HorarioRequest'
+        - type: object
+          properties:
+            id_horario:
+              type: integer
+            hora_inicio:
+              type: string
+              example: "07:00"
+            hora_fin:
+              type: string
+              example: "07:45"
+            asignatura:
+              type: string
+            docente:
+              type: string
+
+    # ── Actividades ──
+
+    ActividadRequest:
+      type: object
+      required: [id_asignacion, id_periodo, tipo, ponderacion, nota_maxima]
+      properties:
+        id_asignacion:
+          type: integer
+        id_periodo:
+          type: integer
+        tipo:
+          $ref: '#/components/schemas/TipoActividad'
+        nombre:
+          type: string
+          maxLength: 200
+        descripcion:
+          type: string
+        fecha_entrega:
+          type: string
+          format: date
+        ponderacion:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          default: 1.0
+        nota_maxima:
+          type: number
+          format: float
+          default: 10.0
+        es_sumativa:
+          type: boolean
+          default: false
+
+    ActividadResponse:
+      allOf:
+        - $ref: '#/components/schemas/ActividadRequest'
+        - type: object
+          properties:
+            id_actividad:
+              type: integer
+            fecha_creacion:
+              type: string
+              format: date-time
+
+    # ── Calificaciones ──
+
+    CalificacionRequest:
+      type: object
+      required: [id_actividad, id_matricula]
+      properties:
+        id_actividad:
+          type: integer
+        id_matricula:
+          type: integer
+        nota:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 10
+        nota_cualitativa:
+          $ref: '#/components/schemas/NotaCualitativa'
+        observacion:
+          type: string
+
+    CalificacionResponse:
+      allOf:
+        - $ref: '#/components/schemas/CalificacionRequest'
+        - type: object
+          properties:
+            id_calificacion:
+              type: integer
+              format: int64
+            fecha_registro:
+              type: string
+              format: date-time
+            fecha_actualizacion:
+              type: string
+              format: date-time
+
+    # ── Asistencias ──
+
+    AsistenciaBatchRequest:
+      type: object
+      required: [id_asignacion, id_periodo, fecha, registros]
+      properties:
+        id_asignacion:
+          type: integer
+        id_periodo:
+          type: integer
+        fecha:
+          type: string
+          format: date
+        registros:
+          type: array
+          items:
+            type: object
+            required: [id_matricula, estado]
+            properties:
+              id_matricula:
+                type: integer
+              estado:
+                $ref: '#/components/schemas/EstadoAsistencia'
+              justificacion:
+                type: string
+
+    AsistenciaResponse:
+      type: object
+      properties:
+        id_asistencia:
+          type: integer
+          format: int64
+        id_matricula:
+          type: integer
+        id_asignacion:
+          type: integer
+        id_periodo:
+          type: integer
+        fecha:
+          type: string
+          format: date
+        estado:
+          $ref: '#/components/schemas/EstadoAsistencia'
+        justificacion:
+          type: string
+        fecha_registro:
+          type: string
+          format: date-time
+
+    ResumenAsistenciaResponse:
+      type: object
+      properties:
+        id_resumen:
+          type: integer
+        id_matricula:
+          type: integer
+        id_asignacion:
+          type: integer
+        id_periodo:
+          type: integer
+        total_presentes:
+          type: integer
+        total_ausentes:
+          type: integer
+        total_justificados:
+          type: integer
+        total_atrasos:
+          type: integer
+        calculado_en:
+          type: string
+          format: date-time
+
+    # ── Promedios ──
+
+    PromedioTrimestralResponse:
+      type: object
+      properties:
+        id_promedio:
+          type: integer
+        id_matricula:
+          type: integer
+        id_asignacion:
+          type: integer
+        id_periodo:
+          type: integer
+        promedio_formativo:
+          type: number
+          format: float
+        nota_sumativa:
+          type: number
+          format: float
+        promedio_trimestral:
+          type: number
+          format: float
+        nota_cualitativa:
+          $ref: '#/components/schemas/NotaCualitativa'
+        calculado_en:
+          type: string
+          format: date-time
+
+    PromedioAnualResponse:
+      type: object
+      properties:
+        id_promedio_anual:
+          type: integer
+        id_matricula:
+          type: integer
+        id_asignacion:
+          type: integer
+        id_ano_lectivo:
+          type: integer
+        promedio_anual:
+          type: number
+          format: float
+        nota_cualitativa:
+          $ref: '#/components/schemas/NotaCualitativa'
+        trimestres:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromedioTrimestralResponse'
+        calculado_en:
+          type: string
+          format: date-time
+
+    # ── Seguimiento Académico ──
+
+    SeguimientoRequest:
+      type: object
+      required: [id_matricula, id_periodo, descripcion, fecha_evento]
+      properties:
+        id_matricula:
+          type: integer
+        id_periodo:
+          type: integer
+        categoria:
+          $ref: '#/components/schemas/CategoriaSeguimiento'
+        descripcion:
+          type: string
+        acciones_tomadas:
+          type: string
+        requiere_followup:
+          type: boolean
+          default: false
+        fecha_evento:
+          type: string
+          format: date
+
+    SeguimientoResponse:
+      allOf:
+        - $ref: '#/components/schemas/SeguimientoRequest'
+        - type: object
+          properties:
+            id_seguimiento:
+              type: integer
+              format: int64
+            registrado_por:
+              type: integer
+            fecha_registro:
+              type: string
+              format: date-time
+
+    SeguimientoPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/SeguimientoResponse'
+
+    # ── Historial de Promoción ──
+
+    HistorialPromocionRequest:
+      type: object
+      required: [id_matricula, id_estudiante, id_grado_origen, id_ano_lectivo, resultado]
+      properties:
+        id_matricula:
+          type: integer
+        id_estudiante:
+          type: integer
+        id_grado_origen:
+          type: integer
+        id_ano_lectivo:
+          type: integer
+        resultado:
+          $ref: '#/components/schemas/ResultadoPromocion'
+        promedio_anual:
+          type: number
+          format: float
+        observaciones:
+          type: string
+
+    HistorialPromocionResponse:
+      allOf:
+        - $ref: '#/components/schemas/HistorialPromocionRequest'
+        - type: object
+          properties:
+            id_historial:
+              type: integer
+            fecha_registro:
+              type: string
+              format: date-time
+
+    # ── Auditoría ──
+
+    AuditoriaResponse:
+      type: object
+      properties:
+        id_auditoria:
+          type: integer
+          format: int64
+        schema_origen:
+          type: string
+          enum: [PRINCIPAL, DOCENTE]
+        id_usuario:
+          type: integer
+        username:
+          type: string
+        accion:
+          type: string
+        tabla_afectada:
+          type: string
+        registro_id:
+          type: integer
+          format: int64
+        descripcion:
+          type: string
+        ip_address:
+          type: string
+        fecha:
+          type: string
+          format: date-time
+
+    AuditoriaPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditoriaResponse'
+
+    # ── Error ──
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string

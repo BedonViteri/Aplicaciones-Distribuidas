@@ -1,0 +1,169 @@
+{
+  "info": {
+    "_postman_id": "67aaddfd-3b37-4f7f-992b-00a87b05fbd2",
+    "name": "PFC",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "47348797"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"username\": \"jdoe\",\r\n  \"password\": \"Secreto123!\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar Estudiantes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/estudiantes?page=0&size=20&estado=true",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "estudiantes"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "0",
+              "type": "text"
+            },
+            {
+              "key": "size",
+              "value": "20",
+              "type": "text"
+            },
+            {
+              "key": "estado",
+              "value": "true",
+              "type": "text"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar Estudiante",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"cedula\": \"0912345678\",\r\n  \"nombres\": \"Juan Carlos\",\r\n  \"apellidos\": \"Pérez López\",\r\n  \"fecha_nacimiento\": \"2010-05-15\",\r\n  \"genero\": \"M\",\r\n  \"telefono\": \"0991234567\",\r\n  \"correo\": \"juan.perez@escuela.edu.ec\",\r\n  \"discapacidad\": false,\r\n  \"origen_listado\": \"NUEVO\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/estudiantes",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "estudiantes"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar Asistencia",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"id_asignacion\": 1,\r\n  \"id_periodo\": 1,\r\n  \"fecha\": \"2025-06-02\",\r\n  \"registros\": [\r\n    {\r\n      \"id_matricula\": 1,\r\n      \"estado\": \"PRESENTE\"\r\n    },\r\n    {\r\n      \"id_matricula\": 2,\r\n      \"estado\": \"AUSENTE\",\r\n      \"justificacion\": \"Enfermedad\"\r\n    },\r\n    {\r\n      \"id_matricula\": 3,\r\n      \"estado\": \"ATRASO\"\r\n    }\r\n  ]\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/asistencias",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "asistencias"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar Calificacion",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"id_actividad\": 1,\r\n  \"id_matricula\": 1,\r\n  \"nota\": 8.50,\r\n  \"nota_cualitativa\": \"AAR\",\r\n  \"observacion\": \"Buen desempeño en la actividad\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/calificaciones",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "v1",
+            "calificaciones"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
